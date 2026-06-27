@@ -51,6 +51,8 @@ const userController: UserController = {
 		const githubId =
 			req.session?.githubId ||
 			(process.env.NODE_ENV === "test" ? "194940960" : null);
+
+			
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -199,31 +201,33 @@ const userController: UserController = {
 				if (err) {
 					return next(new appError(500, "Failed to save session"));
 				}
-
-				// Worker For Generating application-specific data JSON
-				const languageStatsJobExists = await doesJobExist(
-					"get-language-stats",
-					githubUser.login,
-				);
-				const contributionStatsJobExists = await doesJobExist(
-					"get-contribution-stats",
-					githubUser.login,
-				);
-
-				if (!languageStatsJobExists) {
-					await addJobs("get-language-stats", githubUser.login, githubUser.id);
-				}
-
-				if (!contributionStatsJobExists) {
-					await addJobs(
-						"get-contribution-stats",
-						githubUser.login,
-						githubUser.id,
-					);
-				}
-
-				return res.redirect(process.env.FRONTEND_URL!);
 			});
+
+			console.log("User logged in:", githubUser.login, "with ID:", githubUser.id);
+				
+			// Worker For Generating application-specific data JSON
+			//const languageStatsJobExists = await doesJobExist(
+			//	"get-language-stats",
+			//	githubUser.login,
+			//);
+			//const contributionStatsJobExists = await doesJobExist(
+			//	"get-contribution-stats",
+			//	githubUser.login,
+			//);
+			
+			//if (!languageStatsJobExists) {
+			//	await addJobs("get-language-stats", githubUser.login, githubUser.id);
+			//}
+			
+			//if (!contributionStatsJobExists) {
+			//	await addJobs(
+			//		"get-contribution-stats",
+			//		githubUser.login,
+			//		githubUser.id,
+			//	);
+			//}
+			
+			return res.redirect(process.env.FRONTEND_URL!);
 		},
 	),
 	/**

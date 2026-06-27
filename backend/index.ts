@@ -30,7 +30,7 @@ declare module "express-session" {
 	interface SessionData {
 		oauthState?: string;
 		githubId? : string;
-		githubUsername? : string;
+	githubUsername? : string;
 	}
 }
 
