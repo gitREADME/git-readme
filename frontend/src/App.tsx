@@ -69,13 +69,10 @@ function App() {
 			<Route path='/' element={<Landing />} />
 		</Route>	
 
-		{/* Normal Auth Routes */}
-		<Route path="/" element={<ProtectedRoutes permsType="normal"/>}>
-			<Route path='dashboard' element={<Dashboard />} />
-		</Route>		
 
 		{/* Elevated Auth Routes */}
 		<Route path="/" element={<ProtectedRoutes permsType="elevated"/>}>
+			<Route path='dashboard' element={<Dashboard />} />
 			<Route path='/generate-profile' element={<ProfileGeneration />} />
 		</Route>
       </Routes>

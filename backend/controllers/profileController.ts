@@ -45,7 +45,7 @@ const profileController: ProfileController = {
 	 * Based on the previous user choices
 	 */
 	generateProfile: wrapAsyncErrors(async (req, res, next) => {
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -304,7 +304,7 @@ const profileController: ProfileController = {
 	generateIntroduction : wrapAsyncErrors(async (req, res, next) => {
 		const {info , temperature} = req.body as {info?: string , temperature?: number};
 
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -348,7 +348,7 @@ const profileController: ProfileController = {
 	generateTechStack : wrapAsyncErrors(async (req, res, next) => {
 		const {languages} = req.body as {languages?: string[]};
 
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -381,7 +381,7 @@ const profileController: ProfileController = {
 	generateStatsSection : wrapAsyncErrors(async (req, res, next) => {
 		const {type , theme} = req.body as {type?: string , theme?: string};
 		
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);	
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);	
 		if(!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -435,7 +435,7 @@ const profileController: ProfileController = {
 	generateRepoSection : wrapAsyncErrors(async (req, res, next) => {
 		const {repos} = req.body as {repos?: GithubReadmeSection[]};
 
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);	
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);	
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -481,7 +481,7 @@ const profileController: ProfileController = {
 	generateSocialsSection : wrapAsyncErrors(async (req, res, next) => {
 		const {socialLinks} = req.body as {socialLinks?: {name : string , url : string}[]};
 
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -514,7 +514,7 @@ const profileController: ProfileController = {
 	generateResponseForAdditionalPrompt : wrapAsyncErrors(async (req, res, next) => {
 		const {llmChoice , userPrompt , apiKey } = req.body as {llmChoice? : string , userPrompt?: string , apiKey?: string};
 		
-		const githubId = req.session?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId || (process.env.NODE_ENV === "test" ? "194940960" : null);
 
 		if(!githubId) {
 			return next(new appError(401, "Unauthorized"));

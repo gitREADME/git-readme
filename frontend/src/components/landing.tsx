@@ -238,7 +238,7 @@ const Landing = () => {
                 if (authState.isAuthenticated) {
                   navigate("/dashboard");
                 } else {
-                  redirectToGithubOAuth(false);
+                  redirectToGithubOAuth(true);
                 }
               }}
             >
