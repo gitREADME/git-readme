@@ -4,6 +4,9 @@ import appError from "../error/appError.js";
 export default function isLoggedIn(req : Request , res : Response , next : NextFunction){
 	if(process.env.NODE_ENV === "test") return next(); //for testing purposes
 
+	console.log(req.session);
+	console.log(req.session.githubId);
+	
 	if(req.session && req.session.githubId){
 		next();
 	}
