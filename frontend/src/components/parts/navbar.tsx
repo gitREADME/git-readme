@@ -1,9 +1,10 @@
 import { LogOut, FileCode2 } from 'lucide-react'
 import { useAppSelector, useAppDispatch } from '@/store/hooks'
 import { clearAuth } from '@/store/authSlice'
-import { axiosPost } from '@/api/axiosMethods'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { authApiFn } from '@/api/authApi'
+import { clearAuthSession } from '@/utils/authStorage'
 
 const DashboardNavbar = () => {
 	const authState = useAppSelector((state) => state.auth)
@@ -12,12 +13,14 @@ const DashboardNavbar = () => {
 
 	const handleLogout = async () => {
 		try {
-			await axiosPost(`${import.meta.env.VITE_BACKEND_URL}/api/user/auth/github/logout`)
-			dispatch(clearAuth())
-			navigate('/')
+			await authApiFn.logoutUser()
 		} catch (error) {
 			console.error('Logout failed:', error)
-			toast.error('Logout failed. Please try again.')
+			toast.error('Logout request failed. Clearing local session anyway.')
+		} finally {
+			clearAuthSession()
+			dispatch(clearAuth())
+			navigate('/', { replace: true })
 		}
 	}
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { axiosGet } from "./axiosMethods";
 import type { Response } from "./response";
+import { authApiFn } from "./authApi";
 
 export interface Repository {
   name: string;
@@ -18,7 +19,7 @@ interface GetReadmeResponse extends Response<null> {
 
 const fn = {
 	logoutUser : async () => {
-		const res = await axiosGet<Response<number>>(`${import.meta.env.VITE_BACKEND_URL}/api/app/user-count`);
+		const res = await authApiFn.logoutUser();
 		return res;
 	},
 	fetchRepos: async () => {

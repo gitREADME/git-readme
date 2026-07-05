@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { connectRedis } from "./cache/redisConnect.js";
+import { assertJwtSecretConfigured } from "./utils/jwt.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,17 +25,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-import "express-session";
-
-declare module "express-session" {
-	interface SessionData {
-		oauthState?: string;
-		githubId? : string;
-	githubUsername? : string;
-	}
-}
-
 const isProduction = process.env.NODE_ENV === "production";
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 app.use(
 	session({
@@ -77,6 +71,8 @@ app.use("/api/app" , appRoutes)
 app.use(errorMiddleware);
 // --------------- Start Server ---------------
 async function run() {
+	assertJwtSecretConfigured();
+
 	const mongoUri = process.env.MONGODB_URI;
 	if (!mongoUri) {
 		throw new Error("MONGODB_URI is not set");

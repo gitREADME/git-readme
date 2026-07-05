@@ -18,7 +18,7 @@ export default function createRateLimit({
 	limit,
 	windowMs,
 	keyPrefix,
-	getKey = (req: Request) => (req.session?.githubId ? String(req.session.githubId) : (req.ip as string)),
+	getKey = (req: Request) => (req.user?.githubId ? String(req.user.githubId) : (req.ip as string)),
 }: RateLimitOptions) {
 	if (!stores.has(keyPrefix)) {
 		stores.set(keyPrefix, new Map());

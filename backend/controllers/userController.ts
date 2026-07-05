@@ -29,11 +29,14 @@ import {
 	GithubRepo,
 	updateRepoReadme,
 } from "../github/utils/repo.js";
+import { createOAuthExchangeCode, consumeOAuthExchangeCode } from "../utils/oauthExchangeStore.js";
+import { signAccessToken } from "../utils/jwt.js";
 
 interface UserController {
 	getCurrentUser: RequestHandler;
 	authorizeGithub: RequestHandler; //perms params as elevated scopes , elevated_perms == true in query
 	callbackGithub: RequestHandler;
+	exchangeGithubAuth: RequestHandler;
 	logoutGithub: RequestHandler; //destroys session and clears cookie
 	getUserRepos: RequestHandler;
 	getRepoReadme: RequestHandler;
@@ -46,13 +49,8 @@ const userController: UserController = {
 	 * Returns the currently authenticated user's information based on the session data. Requires the user to be logged in.
 	 */
 	getCurrentUser: wrapAsyncErrors(async (req, res, next) => {
-		console.log("Session Data:", req.session.githubId); // Debugging line to check session data
+		const githubId = req.user?.githubId;
 
-		const githubId =
-			req.session?.githubId ||
-			(process.env.NODE_ENV === "test" ? "194940960" : null);
-
-			
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -71,7 +69,7 @@ const userController: UserController = {
 			data: {
 				isAuthenticated: true,
 				login: foundUser.login,
-				githubId: foundUser.githubId,
+				githubId: Number(foundUser.githubId),
 				perms: foundUser.perms,
 			},
 		});
@@ -101,8 +99,14 @@ const userController: UserController = {
 
 			req.session.oauthState = state;
 
-			const authUrl = `${baseAuthUrl}?${params.toString()}`;
-			res.redirect(authUrl);
+			return req.session.save((err) => {
+	  			if (err) {
+	  			  return next(new appError(500, "Failed to start GitHub login"));
+	  			}
+	
+	  			const authUrl = `${baseAuthUrl}?${params.toString()}`;
+	  			return res.redirect(authUrl);
+			});
 		},
 	),
 	/**
@@ -115,8 +119,10 @@ const userController: UserController = {
 			const { code, state , error } = req.query;
 			
 			if (error) {
-				req.session.destroy(() => {});
-				return res.redirect(process.env.FRONTEND_URL!);
+				delete req.session.oauthState;
+				return req.session.save(() => {
+					return res.redirect(process.env.FRONTEND_URL!);
+				});
 			}
 
 			if (!state || state !== req.session.oauthState) {
@@ -124,7 +130,7 @@ const userController: UserController = {
 			}
 
 			if (!code) {
-				return new appError(400, "Authorization code not found");
+				return next(new appError(400, "Authorization code not found"));
 			}
 			
 
@@ -195,15 +201,24 @@ const userController: UserController = {
 				await foundUser.save();
 			}
 
-			req.session.githubId = githubUser.id;
-			req.session.githubUsername = githubUser.login;
-			req.session.save(async (err) => {
-				if (err) {
-					return next(new appError(500, "Failed to save session"));
-				}
-			});
+			delete req.session.oauthState;
+				const exchangeCode = createOAuthExchangeCode({
+					githubId: String(githubUser.id),
+					githubUsername: githubUser.login,
+				});
 
-			console.log("User logged in:", githubUser.login, "with ID:", githubUser.id);
+				return req.session.save((err) => {
+					if (err) {
+						return next(new appError(500, "Failed to save session"));
+					}
+
+					const callbackUrl = new URL(process.env.FRONTEND_URL!);
+					callbackUrl.pathname = "/oauth/callback";
+					callbackUrl.searchParams.set("code", exchangeCode);
+
+					return res.redirect(callbackUrl.toString());
+				});
+
 				
 			// Worker For Generating application-specific data JSON
 			//const languageStatsJobExists = await doesJobExist(
@@ -227,9 +242,41 @@ const userController: UserController = {
 			//	);
 			//}
 			
-			return res.redirect(process.env.FRONTEND_URL!);
 		},
 	),
+	/**
+	 * Exchanges a short-lived OAuth code for a JWT access token.
+	 */
+	exchangeGithubAuth: wrapAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
+		const code = req.body?.code;
+
+		if (typeof code !== "string" || code.trim() === "") {
+			return next(new appError(400, "OAuth exchange code is required"));
+		}
+
+		const record = consumeOAuthExchangeCode(code);
+		if (!record) {
+			return next(new appError(400, "Invalid or expired OAuth exchange code"));
+		}
+
+		const accessToken = signAccessToken({
+			githubId: record.githubId,
+			username: record.githubUsername,
+		});
+
+		return res.status(200).json({
+			success: true,
+			message: "OAuth exchange completed successfully",
+			error: null,
+			data: {
+				accessToken,
+				user: {
+					githubId: Number(record.githubId),
+					username: record.githubUsername,
+				},
+			},
+		});
+	}),
 	/**
 	 * Logs out the user by destroying the session and clearing the authentication cookie.
 	 * Redirects to the frontend URL after logout.
@@ -237,25 +284,25 @@ const userController: UserController = {
 	 */
 	logoutGithub: wrapAsyncErrors(
 		async (req: Request, res: Response, next: NextFunction) => {
-			req.session.destroy((err) => {
+			if (!req.session) {
+				return res.status(200).json({
+					success: true,
+					message: "Logged out successfully",
+					error: null,
+					data: null,
+				});
+			}
+
+			return req.session.destroy((err) => {
 				if (err) return next(new appError(500, "Logout failed"));
+
+				return res.status(200).json({
+					success: true,
+					message: "Logged out successfully",
+					error: null,
+					data: null,
+				});
 			});
-
-			const isProduction = process.env.NODE_ENV === "production";
-
-			res.clearCookie("connect.sid", {
-				path: "/",
-				sameSite: isProduction ? "none" : "lax",
-				httpOnly: true,
-				secure: isProduction,
-			});
-
-			return res.status(200).json({
-				success: true,
-				message: "Logged out successfully",
-				error: null,
-				data : null
-			})
 		},
 	),
 	/**
@@ -263,14 +310,11 @@ const userController: UserController = {
 	 */
 	getUserRepos: wrapAsyncErrors(
 		async (req: Request, res: Response, next: NextFunction) => {
-			const githubId =
-				req.session?.githubId ||
-				(process.env.NODE_ENV === "test" ? "194940960" : null);
+			const githubId = req.user?.githubId;
 			if (!githubId) {
 				return next(new appError(401, "Unauthorized"));
 			}
 
-			console.log(1, req.session.githubId); // Debugging line to check session data
 			const foundUser = await User.findByGithubId(githubId);
 			if (!foundUser) {
 				return next(
@@ -289,11 +333,7 @@ const userController: UserController = {
 
 			const decryptedToken = decrypt(foundUser.accessToken);
 
-			console.log("Decrypted Token:", decryptedToken); // Debugging line to check the decrypted token
-
 			const repos: GithubRepo[] = await getAllUserRepositories(decryptedToken);
-
-			console.log(repos)
 			return res.status(200).json({
 				success: true,
 				message: "Fetched user repositories successfully",
@@ -308,9 +348,7 @@ const userController: UserController = {
 	 */
 	getRepoReadme: wrapAsyncErrors(
 		async (req: Request, res: Response, next: NextFunction) => {
-			const githubId =
-				req.session?.githubId ||
-				(process.env.NODE_ENV === "test" ? "194940960" : null);
+			const githubId = req.user?.githubId;
 			if (!githubId) {
 				return next(new appError(401, "Unauthorized"));
 			}
@@ -356,9 +394,7 @@ const userController: UserController = {
 	 * Fetches the user's languages saved in DB, which can be used to show on profile README and also to generate a tech stack section for the profile README.
 	 */
 	getUserLanguages: wrapAsyncErrors(async (req, res, next) => {
-		const githubId =
-			req.session?.githubId ||
-			(process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId;
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}
@@ -388,9 +424,7 @@ const userController: UserController = {
 	 * Core Functionality : Pushes the generated README to the user login(username)'s GitHub repository. Requires elevated permissions.
 	 */
 	pushReadmeToProfileRepo: wrapAsyncErrors(async (req, res, next) => {
-		const githubId =
-			req.session?.githubId ||
-			(process.env.NODE_ENV === "test" ? "194940960" : null);
+		const githubId = req.user?.githubId;
 		if (!githubId) {
 			return next(new appError(401, "Unauthorized"));
 		}

@@ -13,7 +13,7 @@ This is a TypeScript-based backend server that provides APIs for user authentica
 - **Caching Layer**: Redis-based caching for improved performance
 - **Async Job Queue**: Background job processing for stats generation and profile updates
 - **Error Handling**: Comprehensive error handling and validation middleware
-- **Session Management**: Secure session handling and token encryption
+- **Session Management**: Temporary OAuth state sessions plus JWT bearer authentication
 
 ## Technology Stack
 
@@ -55,5 +55,16 @@ This backend service powers the Git README application, which generates beautifu
 Think of this backend as the brain that talks to GitHub and prepares all the data your frontend needs to display beautiful user profiles and statistics.
 
 ## Getting Started
+
+## Environment Variables
+
+The backend requires these environment variables for the OAuth and JWT auth flow:
+
+- `JWT_SECRET` - Secret used to sign and verify access tokens
+- `GITHUB_CLIENT_ID` - GitHub OAuth app client ID
+- `GITHUB_CLIENT_SECRET` - GitHub OAuth app client secret
+- `GITHUB_REDIRECT_URI` - Backend GitHub callback URL
+- `FRONTEND_URL` - Frontend base URL used for redirects after OAuth completion
+- `SESSION_SECRET` - Secret used only for temporary OAuth state sessions
 
 Refer to the main project documentation for setup and installation instructions.

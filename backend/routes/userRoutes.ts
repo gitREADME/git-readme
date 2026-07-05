@@ -11,7 +11,8 @@ router.get("/auth/me" , isLoggedIn , userController.getCurrentUser);
 
 router.get("/auth/github", userController.authorizeGithub);
 router.get("/auth/github/callback", userController.callbackGithub);
-router.post("/auth/github/logout", isLoggedIn , userController.logoutGithub);
+router.post("/auth/exchange", validate(userValidations.exchangeOAuthCodeSchema), userController.exchangeGithubAuth);
+router.post("/auth/github/logout", userController.logoutGithub);
 
 //User Repos
 router.get("/repos", isLoggedIn, userController.getUserRepos);

@@ -1,22 +1,23 @@
 
 import 'react-toastify/dist/ReactToastify.css'
 
-import { axiosGet } from './api/axiosMethods'
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 
 import LoadingComponent from './components/loading'
 
-import {setAuth, type authState} from './store/authSlice'
+import {setAuth} from './store/authSlice'
 import { useAppDispatch } from './store/hooks'
-import type { Response } from './api/response'
 import Dashboard from './components/dashboard'
 import ProtectedRoutes from './components/protectedRoutes'
 import Landing from './components/landing'
 import GuestRoutes from './components/guestRoutes'
 import { ProfileGeneration } from './components/profileGeneration'
 import Docs from './components/docs'
+import OAuthCallback from './components/oauthCallback'
+import { authApiFn } from './api/authApi'
+import { getAccessToken, saveAuthUser } from './utils/authStorage'
 
 
 function App() {
@@ -25,13 +26,21 @@ function App() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     async function checkAuth() {
+      const accessToken = getAccessToken();
+
+      if (!accessToken) {
+        setLoading(false);
+        return;
+      }
+
       try {
-		const res = await axiosGet<Response<authState>>(`${import.meta.env.VITE_BACKEND_URL}/api/user/auth/me`);
+      const res = await authApiFn.fetchCurrentUser();
 		console.log('App.jsx:' + JSON.stringify(res));
 		if(!res.data || !res.success) {
 			return ;
 		}
 
+      saveAuthUser(res.data);
 		dispatch(setAuth(res.data));
       } catch (error) {
         console.log('Error checking authentication:', error);
@@ -51,6 +60,7 @@ function App() {
     <BrowserRouter>
       <ToastContainer position="top-center" autoClose={3000} hideProgressBar={false} />
       <Routes>
+      <Route path='/oauth/callback' element={<OAuthCallback />} />
 		
 		<Route path='/docs' element={<Docs />} />
 
