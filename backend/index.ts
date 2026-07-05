@@ -45,7 +45,7 @@ app.use(
 		resave: false,
 		saveUninitialized: false,
 		cookie: {
-			sameSite : "lax",
+			sameSite : isProduction ? "none" : "lax",
 			httpOnly: true,
 			secure: isProduction,
 			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
