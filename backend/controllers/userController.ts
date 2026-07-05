@@ -101,8 +101,14 @@ const userController: UserController = {
 
 			req.session.oauthState = state;
 
-			const authUrl = `${baseAuthUrl}?${params.toString()}`;
-			res.redirect(authUrl);
+			return req.session.save((err) => {
+	  			if (err) {
+	  			  return next(new appError(500, "Failed to start GitHub login"));
+	  			}
+	
+	  			const authUrl = `${baseAuthUrl}?${params.toString()}`;
+	  			return res.redirect(authUrl);
+			});
 		},
 	),
 	/**
@@ -124,7 +130,7 @@ const userController: UserController = {
 			}
 
 			if (!code) {
-				return new appError(400, "Authorization code not found");
+				return next(new appError(400, "Authorization code not found"));
 			}
 			
 
@@ -197,13 +203,15 @@ const userController: UserController = {
 
 			req.session.githubId = githubUser.id;
 			req.session.githubUsername = githubUser.login;
-			req.session.save(async (err) => {
+			
+			return req.session.save(async (err) => {
 				if (err) {
 					return next(new appError(500, "Failed to save session"));
 				}
+				console.log("User logged in:", githubUser.login, "with ID:", githubUser.id);
+				return res.redirect(process.env.FRONTEND_URL!);
 			});
 
-			console.log("User logged in:", githubUser.login, "with ID:", githubUser.id);
 				
 			// Worker For Generating application-specific data JSON
 			//const languageStatsJobExists = await doesJobExist(
@@ -226,8 +234,6 @@ const userController: UserController = {
 			//		githubUser.id,
 			//	);
 			//}
-			
-			return res.redirect(process.env.FRONTEND_URL!);
 		},
 	),
 	/**
