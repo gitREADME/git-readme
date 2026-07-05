@@ -25,6 +25,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+
+declare module "express-session" {
+	interface SessionData {
+		oauthState?: string;
+		githubId? : string;
+		githubUsername? : string;
+	}
+}
+
+
 const isProduction = process.env.NODE_ENV === "production";
 if (isProduction) {
   app.set("trust proxy", 1);
